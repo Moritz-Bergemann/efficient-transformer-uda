@@ -84,10 +84,10 @@ class DACS(UDADecorator):
         else:
             self.imnet_model = None
 
-    def get_ema_model(self):
+    def get_ema_model(self): # M: EMA model is exponentially moving average of orig model weights
         return get_module(self.ema_model)
 
-    def get_imnet_model(self):
+    def get_imnet_model(self): # M: IM model for IMFD
         return get_module(self.imnet_model)
 
     def _init_ema_weights(self):
@@ -114,7 +114,7 @@ class DACS(UDADecorator):
                     alpha_teacher * ema_param[:].data[:] + \
                     (1 - alpha_teacher) * param[:].data[:]
 
-    def train_step(self, data_batch, optimizer, **kwargs):
+    def train_step(self, data_batch, optimizer, **kwargs): 
         """The iteration step during training.
 
         This method defines an iteration step during training, except for the
@@ -142,7 +142,7 @@ class DACS(UDADecorator):
         """
 
         optimizer.zero_grad()
-        log_vars = self(**data_batch)
+        log_vars = self(**data_batch) # M: I'M PRETTY SURE THIS CALLS FORWARD_TRAIN
         optimizer.step()
 
         log_vars.pop('loss', None)  # remove the unnecessary 'loss'
@@ -232,12 +232,12 @@ class DACS(UDADecorator):
 
         # Train on source images
         clean_losses = self.get_model().forward_train(
-            img, img_metas, gt_semantic_seg, return_feat=True)
-        src_feat = clean_losses.pop('features')
+            img, img_metas, gt_semantic_seg, return_feat=True) # M: Do training, calc losses & other data
+        src_feat = clean_losses.pop('features') # M: Get source dataset features (for ImageNet feature distance - IMFD)
         clean_loss, clean_log_vars = self._parse_losses(clean_losses)
         log_vars.update(clean_log_vars)
-        clean_loss.backward(retain_graph=self.enable_fdist)
-        if self.print_grad_magnitude:
+        clean_loss.backward(retain_graph=self.enable_fdist) # M: Backprop on losses (retain graph so we can backprop on IMFD in a second)
+        if self.print_grad_magnitude: # M: not that important
             params = self.get_model().backbone.parameters()
             seg_grads = [
                 p.grad.detach().clone() for p in params if p.grad is not None
@@ -248,8 +248,8 @@ class DACS(UDADecorator):
         # ImageNet feature distance
         if self.enable_fdist:
             feat_loss, feat_log = self.calc_feat_dist(img, gt_semantic_seg,
-                                                      src_feat)
-            feat_loss.backward()
+                                                      src_feat) # M: Calc feat dist loss between src feats & IM feats
+            feat_loss.backward() # Compute feat dist loss
             log_vars.update(add_prefix(feat_log, 'src'))
             if self.print_grad_magnitude:
                 params = self.get_model().backbone.parameters()
@@ -311,7 +311,7 @@ class DACS(UDADecorator):
         log_vars.update(mix_log_vars)
         mix_loss.backward()
 
-        if self.local_iter % self.debug_img_interval == 0:
+        if self.local_iter % self.debug_img_interval == 0: # M: Produce debug image
             out_dir = os.path.join(self.train_cfg['work_dir'],
                                    'class_mix_debug')
             os.makedirs(out_dir, exist_ok=True)
