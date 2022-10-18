@@ -4,5 +4,6 @@
 # ---------------------------------------------------------------
 
 from mmseg.models.uda.dacs import DACS
+from mmseg.models.uda.adversarial_uda import AdversarialUDA
 
-__all__ = ['DACS']
+__all__ = ['DACS', 'AdversarialUDA']
