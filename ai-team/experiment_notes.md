@@ -23,7 +23,20 @@ conda install pytorch torchvision torchaudio cudatoolkit=11.1 -c pytorch-lts -c 
 Install mmcv locally (mmsegmentation is in this repository, so does not need to be installed)
 ```sh
 pip install -U openmim
-mim install mmcv-full
+mim install mmcv-full==1.4.0
+```
+
+Install other dependencies (this is how we're currently doing it)
+```
+pip install -r requirements.txt
+```
+
+Install the cityscapes and GTA datasets from [here](https://www.cityscapes-dataset.com/downloads/) and [here](https://download.visinf.tu-darmstadt.de/data/from_games/. Symlink/move them to `data/citsyscapes` and `data/gta`.
+
+Then, run the dataset conversion scripts:
+```sh
+python tools/convert_datasets/gta.py data/gta --nproc 8
+python tools/convert_datasets/cityscapes.py data/cityscapes --nproc 8
 ```
 
 ## Experiment 1 - Domain Adversarial Loss
