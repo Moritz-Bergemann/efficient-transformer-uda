@@ -1,19 +1,55 @@
 from mmseg.models import UDA
 from mmseg.models.uda.uda_decorator import UDADecorator
 import torch
+from torch import nn
+from mmcv.runner import BaseModule
 from copy import deepcopy
+
+#######################
+## GRADIENT REVERSAL ##
+#######################
+from torch.autograd import Function
+
+# M-TODO this should probably go somewhere else
+class GradientReversalFunction(Function):
+    """Gradient reversal function. Acts as identity transform during forward pass, 
+    but multiplies gradient by -alpha during backpropagation. this means alpha 
+    effectively becomes the loss weight during training.
+    """
+    @staticmethod
+    def forward(ctx, x, alpha):
+        ctx.save_for_backward(x, alpha)
+        return x
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        grad_input = None
+        _, alpha = ctx.saved_tensors
+        if ctx.needs_input_grad[0]:
+            grad_input = - alpha*grad_output
+        return grad_input, None
+
+revgrad = GradientReversalFunction.apply
+
+class GradientReversal(nn.Module):
+    def __init__(self, alpha=torch.tensor([1.])):
+        super().__init__()
+        self.alpha = torch.tensor(alpha, requires_grad=False)
+
+    def forward(self, x):
+        return revgrad(x, self.alpha)
+
+## END GRADIENT REVERSAL ##
 
 @UDA.register_module()
 class AdversarialUDA(UDADecorator):
 
-    @staticmethod
-    def build_discriminator(cfg):
-        raise NotImplementedError("TODO - make this make a discriminator")
-
     def __init__(self, **cfg):
+        # Build model etc in UDADecorator
         super(AdversarialUDA, self).__init__(**cfg)
 
-        self.discriminator = AdversarialUDA.build_discriminator(deepcopy(cfg['discriminator']))
+        # Build adversarial discriminator
+        self.discriminator = AdversarialDiscriminator.build_discriminator(deepcopy(cfg['discriminator']))
 
     def train_step(self, data_batch, optimizer, **kwargs):
         """The iteration step during training.
@@ -42,7 +78,7 @@ class AdversarialUDA(UDADecorator):
                 averaging the logs.
         """
         optimizer.zero_grad()
-        log_vars = self(**data_batch) # M: I'M PRETTY SURE THIS CALLS FORWARD_TRAIN
+        log_vars = self(**data_batch) # call forward_train
         optimizer.step()
 
         log_vars.pop('loss', None)  # remove the unnecessary 'loss'
@@ -79,7 +115,7 @@ class AdversarialUDA(UDADecorator):
         src_seg_loss, clean_log_vars = self._parse_losses(clean_losses)
 
         # Compute batch source adversarial loss
-        src_disc_labels = torch.zeros(batch_size)
+        src_disc_labels = torch.zeros(batch_size, device=dev)
         src_disc_loss, src_disc_log_vars = self.discriminator.forward_train(src_feat, src_disc_labels)
         log_vars.update(src_disc_log_vars)
 
@@ -87,22 +123,54 @@ class AdversarialUDA(UDADecorator):
         # First, produce features for target images 
         target_feat = self.get_model().extract_feat(target_img)
 
-        target_disc_labels = torch.ones(batch_size)
+        target_disc_labels = torch.ones(batch_size, device=dev)
         target_disc_loss, target_disc_log_vars = self.discriminator.forward_train(target_feat, target_disc_labels)
         log_vars.update(target_disc_log_vars)
 
-        loss = src_seg_loss + src_disc_loss + target_disc_loss
+        # Compute final loss
+        loss = src_seg_loss + src_disc_loss + target_disc_loss # M-TODO probably make this weighted with CFG params
 
         loss.backward()
 
         return log_vars
 
-        # TODO potential experiment - is it better to just do objectives one at a time or mix different ones between each other?
-            # ANSWER - don't think it matters because this is doing one batch at a time
 
-class AdversarialDiscriminator:
-    def __init__(input_shape, weights=None, classes=2):
-        layers = torch.linear()
+class AdversarialDiscriminator(BaseModule):
+    @staticmethod
+    def build_discriminator(cfg): # M-TODO consider making this part of the module registration system in MMCV, would eventually call MODELS.build() or something like that (like UDA itself)
+        return AdversarialDiscriminator(**cfg)
+
+    def __init__(self, in_features, hidden_features, init_cfg=None, classes=2): # I think actual weight initialisation will happen in base_module.py??
+        super(AdversarialDiscriminator, self).__init__(init_cfg)
+
+        # M-TODO use weights (because we're gonna need to pretrain this guy anyway) - NOTE: I think just passing in init_cfg into __init__ does this
+        # M-TODO does this get put on GPU automatically?
+
+        self.grad_rev = GradientReversal()
+        self.flatten = nn.Flatten()
+        self.lin1 = nn.Linear(in_features, hidden_features) # M-TODO figure out shape of segformer output
+        self.rel1 = nn.ReLU()
+        self.lin2 = nn.Linear(hidden_features, 2)
+
+        self.loss = nn.CrossEntropyLoss()
+
+    # M-TODO random weight initialisation in a defined manner? rather than just using the defaults
+
+    def forward(self, x):
+        x = self.grad_rev(x)
+        
+        x = self.flatten(x)
+        x = self.lin1(x)
+        x = self.rel1(x)
+        x = self.lin2(x)
+
+        return x # M-TODO will likely need adjustment
     
-    def forward_train(img, labels):
-        raise NotImplementedError("TODO")
+    def forward_train(self, img, labels):
+        pred = self(img)
+
+        loss = self.loss(pred, labels)
+
+        log_vars = dict() # M-TODO logging etc here
+
+        return loss, log_vars
