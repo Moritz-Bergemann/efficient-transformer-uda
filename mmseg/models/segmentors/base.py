@@ -174,7 +174,7 @@ class BaseSegmentor(BaseModule, metaclass=ABCMeta):
             if isinstance(loss_value, torch.Tensor):
                 log_vars[loss_name] = loss_value.mean()
             elif isinstance(loss_value, list):
-                log_vars[loss_name] = sum(_loss.mean() for _loss in loss_value)
+                log_vars[loss_name] = sum(_loss.mean() for _loss in loss_value) # NOTE: Alternative option - have this return discrimination loss and adversarial loss (option we are currently running with would have this return a bunch of features)
             else:
                 raise TypeError(
                     f'{loss_name} is not a tensor or list of tensors')

@@ -75,10 +75,15 @@ model = dict(
 ```
 
 **Another important question: Where is the `runner` defined?**
+
 The runner is actually defined directly in [`gta2cs_uda_warm_fdthings_rcs_croppl_a999_daformer_mitb5_s0.py`](../configs/daformer/gta2cs_uda_warm_fdthings_rcs_croppl_a999_daformer_mitb5_s0.py)!
 ```py
 runner = dict(type='IterBasedRunner', max_iters=40000)
 ```
+
+**Where is model saving done?**
+[here, in MMCV](https://github.com/open-mmlab/mmcv/blob/be684eeb4ce80cee51b200cadf4175745a6b3824/mmcv/runner/checkpoint.py). This took a very long time to find.
+
 
 ## Other stuff
 [`gta_to_cityscapes_512x512.py`](../configs/_base_/datasets/gta_to_cityscapes_512x512.py) is the config for no UDA, training on GTA and evaluating on Cityscapes.
@@ -90,3 +95,44 @@ runner = dict(type='IterBasedRunner', max_iters=40000)
     try:
         return obj_cls(**args)
 ```
+
+This is around about the path we take during training:
+```
+  File "run_experiments.py", line 106, in <module>
+    train.main([config_files[i]])
+  File "/home/moritz/Documents/github/DAFormer/tools/train.py", line 166, in main
+    train_segmentor(
+  File "/home/moritz/Documents/github/DAFormer/mmseg/apis/train.py", line 131, in train_segmentor
+    runner.run(data_loaders, cfg.workflow)
+  File "/home/moritz/miniconda3/envs/daformer/lib/python3.8/site-packages/mmcv/runner/iter_based_runner.py", line 134, in run
+    iter_runner(iter_loaders[i], **kwargs)
+  File "/home/moritz/miniconda3/envs/daformer/lib/python3.8/site-packages/mmcv/runner/iter_based_runner.py", line 61, in train
+    outputs = self.model.train_step(data_batch, self.optimizer, **kwargs)
+  File "/home/moritz/miniconda3/envs/daformer/lib/python3.8/site-packages/mmcv/parallel/data_parallel.py", line 75, in train_step
+    return self.module.train_step(*inputs[0], **kwargs[0])
+  File "/home/moritz/Documents/github/DAFormer/mmseg/models/uda/dacs.py", line 145, in train_step
+    log_vars = self(**data_batch) # M: I'M PRETTY SURE THIS CALLS FORWARD_TRAIN
+  File "/home/moritz/miniconda3/envs/daformer/lib/python3.8/site-packages/torch/nn/modules/module.py", line 727, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/moritz/miniconda3/envs/daformer/lib/python3.8/site-packages/mmcv/runner/fp16_utils.py", line 98, in new_func
+    return old_func(*args, **kwargs)
+  File "/home/moritz/Documents/github/DAFormer/mmseg/models/segmentors/base.py", line 109, in forward
+    return self.forward_train(img, img_metas, **kwargs)
+  File "/home/moritz/Documents/github/DAFormer/mmseg/models/uda/dacs.py", line 234, in forward_train
+    clean_losses = self.get_model().forward_train(
+  File "/home/moritz/Documents/github/DAFormer/mmseg/models/segmentors/encoder_decoder.py", line 160, in forward_train
+    loss_decode = self._decode_head_forward_train(x, img_metas,
+  File "/home/moritz/Documents/github/DAFormer/mmseg/models/segmentors/encoder_decoder.py", line 92, in _decode_head_forward_train
+    loss_decode = self.decode_head.forward_train(x, img_metas,
+  File "/home/moritz/Documents/github/DAFormer/mmseg/models/decode_heads/decode_head.py", line 193, in forward_train
+    seg_logits = self.forward(inputs)
+  File "/home/moritz/Documents/github/DAFormer/mmseg/models/decode_heads/daformer_head.py", line 160, in forward
+    n, _, h, w = x[-1].shape
+AttributeError: 'str' object has no attribute 'shape'
+```
+
+## The new overall design I am doing
+- Hava an adversarial mix transformer backbone that computes domain predictions somehow
+- These losses must then be forwarded to the decoder somehow.
+- We need to add a "train only domain classifier" functionality to make sure we can train on the target set
+- All of this should then be pretty reusable for the cross-attention experiments.
