@@ -70,6 +70,7 @@ class DomainAdversarialSegmentor(EncoderDecoder):
 
         loss_decode = self._decode_head_forward_train(x, img_metas,
                                                       gt_semantic_seg,
+                                                      gt_disc,
                                                       seg_weight)
         losses.update(loss_decode)
 
