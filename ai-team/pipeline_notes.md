@@ -136,3 +136,22 @@ AttributeError: 'str' object has no attribute 'shape'
 - These losses must then be forwarded to the decoder somehow.
 - We need to add a "train only domain classifier" functionality to make sure we can train on the target set
 - All of this should then be pretty reusable for the cross-attention experiments.
+
+## Creating a custom Model fully for Domain Adversarial
+This lets us do the following cool things:
+- Properly calculate DA loss + seg loss (rather than hacking it)
+  - Doing it for this reason! And others I've already forgotten.
+- Lets us add "train only the discriminator" or "don't train the discriminator" function, which is really useful! What this does could also be modified depending on the situation. (For example, training the patchwise discriminators.)
+- Make the adversary part of the base model config? This might be pushing it though, since it would need to be super versatile
+  - I don't know about this - sometimes it should take in encoder stuff, sometimes decoder stuff. Where would that be defined?
+  - It would make more sense for `DomainAdversarialSegmentor`'s `forward_train()` to just account for domain adversarial features being passed around
+    - UNLESS we just make it an extra step there, in `forward_train()`. Is that stupid? I think it kind of is, it restrains us from using decoder output in the segmentor if we want to.
+
+- **WAIT**! Can't we just do this using a domain adversarial decode head superclass?
+  - If we do this, the encoder can't have any domain adversarial bits
+  - We also can't really do "train only the discriminator", since that information needs to get to the decode head somehow    
+
+## Things I don't quite know yet
+- Where should we apply weighting to the adversarial loss? Should we weight the actual loss output, apply it as part of gradient reversal, or something else?
+  - I think there's a difference between these - doing it right at the end will affect how much the discriminator is updated, whereas I don't think the other ones will
+  - **Ask the team about this**
