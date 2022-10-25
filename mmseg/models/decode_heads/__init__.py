@@ -23,4 +23,5 @@ __all__ = [
     'SegFormerHead',
     'DAFormerHead',
     'ISAHead',
+    'DASBasicHead',
 ]
