@@ -10,13 +10,16 @@
 import torch
 import torch.nn as nn
 from mmcv.cnn import ConvModule
+from mmcv.runner import BaseModule, force_fp32
 
 from mmseg.ops import resize
 from ..builder import HEADS
+from ..losses import CrossEntropyLoss
 from .decode_head import BaseDecodeHead
 
 
 # M-TODO this should probably go somewhere else
+from torch.autograd import Function
 class GradientReversalFunction(Function):
     """Gradient reversal function. Acts as identity transform during forward pass, 
     but multiplies gradient by -alpha during backpropagation. this means alpha 
@@ -47,6 +50,18 @@ class GradientReversal(nn.Module):
 
 ## END GRADIENT REVERSAL ##
 
+class MLP(nn.Module):
+    """Linear Embedding."""
+
+    def __init__(self, input_dim=2048, embed_dim=768):
+        super().__init__()
+        self.proj = nn.Linear(input_dim, embed_dim)
+
+    def forward(self, x):
+        x = x.flatten(2).transpose(1, 2).contiguous() # M-TODO: Figure out why they do flatten then transpose then contiguous?
+        x = self.proj(x)
+        return x
+
 # M-TODO also put this somewhere else
 from mmcv.runner import BaseModule
 class AdversarialDiscriminator(BaseModule):
@@ -61,10 +76,9 @@ class AdversarialDiscriminator(BaseModule):
         # M-TODO does this get put on GPU automatically?
 
         self.grad_rev = GradientReversal()
-        self.flatten = nn.Flatten()
-        self.lin1 = nn.Linear(in_features, hidden_features) # M-TODO figure out shape of segformer output
+        self.mlp1 = MLP(input_dim=in_features, embed_dim=hidden_features)
         self.rel1 = nn.ReLU()
-        self.lin2 = nn.Linear(hidden_features, 2)
+        self.mlp2 = MLP(input_dim=hidden_features, embed_dim=2)
 
         self.loss = nn.CrossEntropyLoss()
 
@@ -74,43 +88,20 @@ class AdversarialDiscriminator(BaseModule):
         x = self.grad_rev(x)
         
         x = self.flatten(x)
-        x = self.lin1(x)
+        x = self.mlp1(x)
         x = self.rel1(x)
-        x = self.lin2(x)
+        x = self.mlp1(x)
 
         return x # M-TODO will likely need adjustment
-    
-    def forward_train(self, img, labels):
-        pred = self(img)
-
-        loss = self.loss(pred, labels)
-
-        log_vars = dict() # M-TODO logging etc here
-
-        return loss, log_vars
-
-class MLP(nn.Module):
-    """Linear Embedding."""
-
-    def __init__(self, input_dim=2048, embed_dim=768):
-        super().__init__()
-        self.proj = nn.Linear(input_dim, embed_dim)
-
-    def forward(self, x):
-        x = x.flatten(2).transpose(1, 2).contiguous() # M-TODO: Figure out why they do flatten then transpose then contiguous?
-        x = self.proj(x)
-        return x
-
 
 @HEADS.register_module()
-class SegFormerHead(BaseDecodeHead):
+class DASBasicHead(BaseDecodeHead):
     """
-    SegFormer: Simple and Efficient Design for Semantic Segmentation with
-    Transformers
+    Basic Domain Adversarial SegFormer head.
     """
 
     def __init__(self, **kwargs):
-        super(SegFormerHead, self).__init__(
+        super(DASBasicHead, self).__init__(
             input_transform='multiple_select', **kwargs)
 
         decoder_params = kwargs['decoder_params']
@@ -133,7 +124,9 @@ class SegFormerHead(BaseDecodeHead):
         self.linear_pred = nn.Conv2d(
             embedding_dim, self.num_classes, kernel_size=1)
 
-        self.discriminator = AdversarialDiscriminator(kwargs['adv_discriminator'])
+        self.discriminator = AdversarialDiscriminator(in_features=self.in_channels[0], **kwargs['discriminator'])
+
+        self.loss_disc = CrossEntropyLoss() # M-TODO figure out if it's ok for this to be hardcoded
 
     def forward(self, inputs):
         x = inputs
@@ -162,6 +155,26 @@ class SegFormerHead(BaseDecodeHead):
         x = self.linear_pred(x)
 
         # Do domain prediction
-        domain_pred = self.discriminator
+        domain_pred = self.discriminator(x[-1])
 
         return x, domain_pred
+
+    def forward_train(self,
+                      inputs,
+                      img_metas,
+                      gt_semantic_seg,
+                      gt_disc,
+                      train_cfg,
+                      seg_weight=None):
+        """Forward training function updated to account for domain adversarial predictions.
+        """
+        seg_logits, domain_logits = self.forward(inputs)
+        losses = self.losses(seg_logits, gt_semantic_seg, domain_logits, gt_disc, seg_weight)
+        return losses
+
+    @force_fp32(apply_to=('seg_logit', 'domain_logit', )) # M-TODO loss should be weighted by the end of this function. Remember that loss function has a weight attribute? So maybe do it there
+    def losses(self, seg_logit, seg_label, domain_logit, domain_label, seg_weight=None):
+        """Compute segmentation loss + adversarial loss."""
+        loss = super.losses(seg_logit, seg_label, seg_weight=seg_weight)
+        loss['loss_adv'] = self.loss_disc(domain_logit, domain_label)
+        return loss
