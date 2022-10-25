@@ -5,41 +5,6 @@ from torch import nn
 from mmcv.runner import BaseModule
 from copy import deepcopy
 
-#######################
-## GRADIENT REVERSAL ##
-#######################
-from torch.autograd import Function
-
-# M-TODO this should probably go somewhere else
-class GradientReversalFunction(Function):
-    """Gradient reversal function. Acts as identity transform during forward pass, 
-    but multiplies gradient by -alpha during backpropagation. this means alpha 
-    effectively becomes the loss weight during training.
-    """
-    @staticmethod
-    def forward(ctx, x, alpha):
-        ctx.save_for_backward(x, alpha)
-        return x
-    
-    @staticmethod
-    def backward(ctx, grad_output):
-        grad_input = None
-        _, alpha = ctx.saved_tensors
-        if ctx.needs_input_grad[0]:
-            grad_input = - alpha*grad_output
-        return grad_input, None
-
-revgrad = GradientReversalFunction.apply
-
-class GradientReversal(nn.Module):
-    def __init__(self, alpha=torch.tensor([1.])):
-        super().__init__()
-        self.alpha = torch.tensor(alpha, requires_grad=False)
-
-    def forward(self, x):
-        return revgrad(x, self.alpha)
-
-## END GRADIENT REVERSAL ##
 
 @UDA.register_module()
 class AdversarialUDA(UDADecorator):
@@ -50,6 +15,9 @@ class AdversarialUDA(UDADecorator):
 
         # Build adversarial discriminator
         self.discriminator = AdversarialDiscriminator.build_discriminator(deepcopy(cfg['discriminator']))
+
+        # Set optimiser for adversarial discriminator
+        # self.discriminator_optimizer = 
 
     def train_step(self, data_batch, optimizer, **kwargs):
         """The iteration step during training.
@@ -108,27 +76,25 @@ class AdversarialUDA(UDADecorator):
         dev = img.device
 
         # Source dataset
-        # Compute batch source segmentation loss
-        clean_losses = self.get_model().forward_train( # M: NOTE: Losses returned as defined in BaseSegmentor
+        # Compute batch source segmentation and adversarial loss
+        src_disc_labels = torch.zeros(batch_size, device=dev)
+
+        clean_losses = self.get_model().forward_train( # M-NOTE: Losses returned as defined in BaseSegmentor
         img, img_metas, gt_semantic_seg, return_feat=False) # M: Do training, calc losses & other data
         src_feat = clean_losses.pop('features') # M: Get source dataset features (for calculating adversarial loss)
-        src_seg_loss, clean_log_vars = self._parse_losses(clean_losses)
+        src_loss, src_log_vars = self._parse_losses(clean_losses)
 
         # Compute batch source adversarial loss
-        src_disc_labels = torch.zeros(batch_size, device=dev)
-        src_disc_loss, src_disc_log_vars = self.discriminator.forward_train(src_feat, src_disc_labels)
-        log_vars.update(src_disc_log_vars)
+        log_vars.update(src_log_vars)
 
         # Compute batch target adversarial loss
-        # First, produce features for target images 
-        target_feat = self.get_model().extract_feat(target_img)
-
         target_disc_labels = torch.ones(batch_size, device=dev)
-        target_disc_loss, target_disc_log_vars = self.discriminator.forward_train(target_feat, target_disc_labels)
+        target_disc_loss, target_disc_log_vars = self.get_model().forward_train(
+            img, img_metas, None, return_feat=False)
         log_vars.update(target_disc_log_vars)
 
         # Compute final loss
-        loss = src_seg_loss + src_disc_loss + target_disc_loss # M-TODO probably make this weighted with CFG params
+        loss = src_loss + target_disc_loss # M-TODO probably make this weighted with CFG params - but idk, should the weighting go here? Maybe the weighting that increases by total steps should
 
         loss.backward()
 
