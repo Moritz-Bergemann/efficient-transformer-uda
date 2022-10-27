@@ -27,7 +27,7 @@ class DomainAdversarialSegmentor(EncoderDecoder):
                                                          pretrained,
                                                          init_cfg)
 
-        # M-TODO something probably goes here
+        # M-TODO something probably goes here, stuff like the weights to each thing
 
     def _decode_head_forward_train(self,
                                 x,
@@ -80,5 +80,3 @@ class DomainAdversarialSegmentor(EncoderDecoder):
             losses.update(loss_aux)
 
         return losses
-
-

@@ -11,6 +11,7 @@ from .psp_head import PSPHead
 from .segformer_head import SegFormerHead
 from .sep_aspp_head import DepthwiseSeparableASPPHead
 from .uper_head import UPerHead
+from .das_basic_head import DASBasicHead
 
 __all__ = [
     'FCNHead',

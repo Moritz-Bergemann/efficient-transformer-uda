@@ -76,9 +76,9 @@ class AdversarialDiscriminator(BaseModule):
         # M-TODO does this get put on GPU automatically?
 
         self.grad_rev = GradientReversal()
-        self.mlp1 = MLP(input_dim=in_features, embed_dim=hidden_features)
+        self.lin1 = nn.Linear(in_features=in_features, out_features=hidden_features)
         self.rel1 = nn.ReLU()
-        self.mlp2 = MLP(input_dim=hidden_features, embed_dim=2)
+        self.lin2 = nn.Linear(in_features=hidden_features, out_features=2)
 
         self.loss = nn.CrossEntropyLoss()
 
@@ -89,8 +89,10 @@ class AdversarialDiscriminator(BaseModule):
         
         x = self.flatten(x)
         x = self.mlp1(x)
+        x = x.flatten(2).transpose(1, 2).contiguous() # M-TODO: Figure out why they do flatten then transpose then contiguous?
+        x = self.lin1(x)
         x = self.rel1(x)
-        x = self.mlp1(x)
+        x = self.lin2(x)
 
         return x # M-TODO will likely need adjustment
 
@@ -124,7 +126,9 @@ class DASBasicHead(BaseDecodeHead):
         self.linear_pred = nn.Conv2d(
             embedding_dim, self.num_classes, kernel_size=1)
 
-        self.discriminator = AdversarialDiscriminator(in_features=self.in_channels[0], **kwargs['discriminator'])
+        discriminator_params = decoder_params['discriminator']
+        # M-FIXME check if in_channels is the right thing to use
+        self.discriminator = AdversarialDiscriminator(in_features=self.in_channels[-1], hidden_features=discriminator_params['hidden_features'])
 
         self.loss_disc = CrossEntropyLoss() # M-TODO figure out if it's ok for this to be hardcoded
 
@@ -162,7 +166,7 @@ class DASBasicHead(BaseDecodeHead):
 
         if compute_disc:
             # Do domain prediction
-            domain_pred = self.discriminator(x[-1])
+            domain_pred = self.discriminator(inputs[-1])
         else:
             domain_pred = None
 
