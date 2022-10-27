@@ -1,12 +1,12 @@
-__base__ = [
+_base_ = [
     # All the defaults
     '../_base_/default_runtime.py',
     # SegFormer to use
-    '../_base_/models/segformer_b5.py', # M-TODO maybe make this b3 or something and see how we go
+    '../_base_/models/das_basic.py', # M-TODO maybe make this b3 or something and see how we go
     # Adversarial UDA
     '../_base_/uda/adversarial_uda.py',
     # GTA->Cityscapes Data Loading (256x256 for testing purposes)
-    '../_base_/datasets/uda_gta_to_cityscapes_512x512.py',
+    '../_base_/datasets/uda_gta_to_cityscapes_128x128.py',
     # AdamW
     '../_base_/schedules/adamw.py',
     # Linear Learning Rate Warmup with Subsequent Linear Decay
@@ -35,7 +35,7 @@ evaluation = dict(interval=4000, metric='mIoU')
 name = 'gta2cs_das_256x256'
 exp = 'basic'
 name_dataset = 'gta2cityscapes'
-name_architecture = 'segformer_plus_adversarial'
+name_architecture = 'basic_domain_adversarial_segformer'
 name_encoder = 'mitb5'
 name_decoder = 'segformer_decoder'
 name_uda = 'basic_domain_adversarial_discriminator'
