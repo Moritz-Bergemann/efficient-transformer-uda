@@ -23,7 +23,7 @@ model = dict(
         align_corners=False,
         decoder_params=dict(
             discriminator=dict(
-                hidden_features=1024),
+                intermed_channels=32),
             # The following are from SegFormer. M-TODO verify!
             embed_dim=768, 
             conv_kernel_size=1

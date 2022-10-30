@@ -41,8 +41,9 @@ class GradientReversalFunction(Function):
 revgrad = GradientReversalFunction.apply
 
 class GradientReversal(nn.Module):
-    def __init__(self, alpha=torch.tensor([1.])):
+    def __init__(self, alpha=1.):
         super().__init__()
+        
         self.alpha = torch.tensor(alpha, requires_grad=False)
 
     def forward(self, x):
@@ -58,7 +59,17 @@ class MLP(nn.Module):
         self.proj = nn.Linear(input_dim, embed_dim)
 
     def forward(self, x):
+        # print("-" * 20)
+        # print(f"x shape before flatten: {x.shape}")
+        # print("-" * 20)
         x = x.flatten(2).transpose(1, 2).contiguous() # M-TODO: Figure out why they do flatten then transpose then contiguous?
+        # print("-" * 20)
+        # print(f"x shape after flatten: {x.shape}")
+        # print("-" * 20)
+        # print("-" * 20)
+        # print("Proj:")
+        # print(self.proj)
+        # print("-" * 20)
         x = self.proj(x)
         return x
 
@@ -69,32 +80,41 @@ class AdversarialDiscriminator(BaseModule):
     def build_discriminator(cfg): # M-TODO consider making this part of the module registration system in MMCV, would eventually call MODELS.build() or something like that (like UDA itself)
         return AdversarialDiscriminator(**cfg)
 
-    def __init__(self, in_features, hidden_features, init_cfg=None, classes=2): # I think actual weight initialisation will happen in base_module.py??
+    def __init__(self, in_channels, intermed_channels, init_cfg=None, classes=2): # I think actual weight initialisation will happen in base_module.py??
         super(AdversarialDiscriminator, self).__init__(init_cfg)
 
         # M-TODO use weights (because we're gonna need to pretrain this guy anyway) - NOTE: I think just passing in init_cfg into __init__ does this
         # M-TODO does this get put on GPU automatically?
 
         self.grad_rev = GradientReversal()
-        self.lin1 = nn.Linear(in_features=in_features, out_features=hidden_features)
-        self.rel1 = nn.ReLU()
-        self.lin2 = nn.Linear(in_features=hidden_features, out_features=2)
 
-        self.loss = nn.CrossEntropyLoss()
+        self.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=intermed_channels, kernel_size=3, padding=1)
+        self.relu = nn.ReLU()
+        self.conv2 = nn.Conv2d(in_channels=intermed_channels, out_channels=classes, kernel_size=3, padding=1)
+        
+        self.gpool = nn.AdaptiveAvgPool2d(output_size=1)
 
     # M-TODO random weight initialisation in a defined manner? rather than just using the defaults
 
-    def forward(self, x):
+    def forward(self, x:torch.Tensor):
         x = self.grad_rev(x)
-        
-        x = self.flatten(x)
-        x = self.mlp1(x)
-        x = x.flatten(2).transpose(1, 2).contiguous() # M-TODO: Figure out why they do flatten then transpose then contiguous?
-        x = self.lin1(x)
-        x = self.rel1(x)
-        x = self.lin2(x)
 
-        return x # M-TODO will likely need adjustment
+        # print('~' * 20)
+        # print(f"input shape: '{x.shape}'")
+        # print('~' * 20)
+
+        x = self.conv1(x)
+        x = self.relu(x)
+        x = self.conv2(x)
+
+        x = self.gpool(x)
+        x = torch.squeeze(x)
+
+        # print('~' * 20)
+        # print(f"final pred shape: '{x.shape}'")
+        # print('~' * 20)
+
+        return x
 
 @HEADS.register_module()
 class DASBasicHead(BaseDecodeHead):
@@ -128,7 +148,7 @@ class DASBasicHead(BaseDecodeHead):
 
         discriminator_params = decoder_params['discriminator']
         # M-FIXME check if in_channels is the right thing to use
-        self.discriminator = AdversarialDiscriminator(in_features=self.in_channels[-1], hidden_features=discriminator_params['hidden_features'])
+        self.discriminator = AdversarialDiscriminator(in_channels=self.in_channels[-1], intermed_channels=discriminator_params['intermed_channels'])
 
         self.loss_disc = CrossEntropyLoss() # M-TODO figure out if it's ok for this to be hardcoded
 
@@ -193,11 +213,33 @@ class DASBasicHead(BaseDecodeHead):
     @force_fp32(apply_to=('seg_logit', 'domain_logit', )) # M-TODO loss should be weighted by the end of this function. Remember that loss function has a weight attribute? So maybe do it there
     def losses(self, seg_logit, seg_label, domain_logit, domain_label, seg_weight=None):
         """Compute segmentation loss + adversarial loss. If either input (segmentation & domain label) is None, the respective loss is not computed."""
+        # print('~'*20)
+        # try:
+        #     print(f"seg_logit device: {seg_logit.device}")
+        # except: pass
+        # try:
+        #     print(f"seg_label device: {seg_label.device}")
+        # except: pass
+        # try:
+        #     print(f"domain_logit device: {domain_logit.device}")
+        # except: pass
+        # try:
+        #     print(f"domain_label device: {domain_label.device}")
+        # except: pass
+        # print('~'*20)
+
         if seg_logit != None:
-            loss = super.losses(seg_logit, seg_label, seg_weight=seg_weight)
+            loss = super().losses(seg_logit, seg_label, seg_weight=seg_weight)
         else:
             loss = dict()
         
+        # print('-' *  20)
+        # print(f"domain_logit shape is {domain_logit.shape}")
+        # print(f"domain_label shape is {domain_label.shape}")
+        # print(f"domain_label:")
+        # print(domain_label)
+        # print('-' *  20)
+
         if domain_logit != None:
             loss['loss_adv'] = self.loss_disc(domain_logit, domain_label)
         
