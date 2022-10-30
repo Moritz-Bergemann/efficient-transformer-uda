@@ -6,7 +6,7 @@ _base_ = [
     # Adversarial UDA
     '../_base_/uda/adversarial_uda.py',
     # GTA->Cityscapes Data Loading (256x256 for testing purposes)
-    '../_base_/datasets/uda_gta_to_cityscapes_128x128.py',
+    '../_base_/datasets/uda_gta_to_cityscapes_256x256.py',
     # AdamW
     '../_base_/schedules/adamw.py',
     # Linear Learning Rate Warmup with Subsequent Linear Decay
@@ -32,11 +32,11 @@ optimizer = dict(
             pos_block=dict(decay_mult=0.0),
             norm=dict(decay_mult=0.0))))
 n_gpus = 1
-runner = dict(type='IterBasedRunner', max_iters=500)
+runner = dict(type='IterBasedRunner', max_iters=40000)
 
 # Logging Configuration
-checkpoint_config = dict(by_epoch=False, interval=500, max_keep_ckpts=1)
-evaluation = dict(interval=500, metric='mIoU')
+checkpoint_config = dict(by_epoch=False, interval=40000, max_keep_ckpts=1)
+evaluation = dict(interval=4000, metric='mIoU')
 
 # Meta Information for Result Analysis
 name = 'gta2cs_das_256x256'

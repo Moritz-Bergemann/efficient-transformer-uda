@@ -73,24 +73,23 @@ class AdversarialUDA(UDADecorator):
 
         # Source dataset
         # Compute batch source segmentation and adversarial loss
-        gt_src_disc = torch.zeros(batch_size, device=dev)
+        gt_src_disc = torch.zeros(batch_size, device=dev, dtype=torch.long)
 
         clean_losses = self.get_model().forward_train( # M-NOTE: Losses returned as defined in BaseSegmentor
         img, img_metas, gt_semantic_seg, gt_src_disc) # M: Do training, calc losses & other data
-        src_feat = clean_losses.pop('features') # M: Get source dataset features (for calculating adversarial loss)
         src_loss, src_log_vars = self._parse_losses(clean_losses)
 
         log_vars.update(src_log_vars)
 
         # Compute batch target adversarial loss
-        gt_target_disc = torch.ones(batch_size, device=dev)
-        target_disc_loss, target_disc_log_vars = self.get_model().forward_train(
+        gt_target_disc = torch.ones(batch_size, device=dev, dtype=torch.long)
+        clean_target_disc_losses = self.get_model().forward_train(
             target_img, target_img_metas, None, gt_target_disc)
+        target_disc_loss, target_disc_log_vars = self._parse_losses(clean_target_disc_losses)
         log_vars.update(target_disc_log_vars)
 
         # Compute final loss
         loss = src_loss + target_disc_loss # M-TODO probably make this weighted with CFG params - but idk, should the weighting go here? Maybe the weighting that increases by total steps should
-
         loss.backward()
 
         return log_vars

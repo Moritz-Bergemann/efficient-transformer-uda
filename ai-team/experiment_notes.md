@@ -38,7 +38,12 @@ Then, run the dataset conversion scripts:
 python tools/convert_datasets/gta.py data/gta --nproc 8
 python tools/convert_datasets/cityscapes.py data/cityscapes --nproc 8
 ```
+# Things to note
+SegFormer's attention is performed along channels rather than along features.
 
+Why don't we just do the domain classifier like SegFormer do theirs?
+- Alternatively, just do a real simple conv based one
+    - In the thesis would need to discuss effect of type of features on the conv 
 
 ## Experiment 1 - Domain Adversarial Loss
 ## Experiment 2 - Patch-wise Domain Adversarial Loss
