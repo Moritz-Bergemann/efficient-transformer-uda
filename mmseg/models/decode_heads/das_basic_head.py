@@ -209,6 +209,27 @@ class DASBasicHead(BaseDecodeHead):
         seg_logits, domain_logits = self.forward(inputs, compute_seg=compute_seg, compute_disc=compute_disc)
         losses = self.losses(seg_logits, gt_semantic_seg, domain_logits, gt_disc, seg_weight)
         return losses
+    
+    def forward_test(self, inputs, img_metas, test_cfg):
+        """Forward function for testing.
+
+        Args:
+            inputs (list[Tensor]): List of multi-level img features.
+            img_metas (list[dict]): List of image info dict where each dict
+                has: 'img_shape', 'scale_factor', 'flip', and may also contain
+                'filename', 'ori_shape', 'pad_shape', and 'img_norm_cfg'.
+                For details on the values of these keys see
+                `mmseg/datasets/pipelines/formatting.py:Collect`.
+            test_cfg (dict): The testing config.
+
+        Returns:
+            Tensor: Output segmentation map.
+        """
+
+        print("we are inside forward_test!")
+        seg_pred, _ = self.forward(inputs, compute_disc=False) # Don't compute discriminator features - their only point is to align feature space during training
+
+        return seg_pred
 
     @force_fp32(apply_to=('seg_logit', 'domain_logit', )) # M-TODO loss should be weighted by the end of this function. Remember that loss function has a weight attribute? So maybe do it there
     def losses(self, seg_logit, seg_label, domain_logit, domain_label, seg_weight=None):

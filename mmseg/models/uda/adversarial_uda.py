@@ -1,3 +1,4 @@
+from typing import OrderedDict
 from mmseg.models import UDA
 from mmseg.models.uda.uda_decorator import UDADecorator
 import torch
@@ -13,7 +14,7 @@ class AdversarialUDA(UDADecorator):
         # Build model etc in UDADecorator
         super(AdversarialUDA, self).__init__(**cfg)
 
-        # M-TODO add something about the loss weighting schedule here
+        # M-TODO add something about the loss weighting schedule here (i.e. weigh target loss more later? Is this stupid?)
 
     def train_step(self, data_batch, optimizer, **kwargs):
         """The iteration step during training.
@@ -46,6 +47,7 @@ class AdversarialUDA(UDADecorator):
         optimizer.step()
 
         log_vars.pop('loss', None)  # remove the unnecessary 'loss'
+
         outputs = dict(
             log_vars=log_vars, num_samples=len(data_batch['img_metas']))
         return outputs
@@ -74,22 +76,39 @@ class AdversarialUDA(UDADecorator):
         # Source dataset
         # Compute batch source segmentation and adversarial loss
         gt_src_disc = torch.zeros(batch_size, device=dev, dtype=torch.long)
+        clean_src_losses = self.get_model().forward_train( # M-NOTE: Losses returned as defined in BaseSegmentor
+            img, img_metas, gt_semantic_seg, gt_src_disc) # M: Do training, calc losses & other data
 
-        clean_losses = self.get_model().forward_train( # M-NOTE: Losses returned as defined in BaseSegmentor
-        img, img_metas, gt_semantic_seg, gt_src_disc) # M: Do training, calc losses & other data
-        src_loss, src_log_vars = self._parse_losses(clean_losses)
-
+        src_loss, src_log_vars = self._parse_losses(clean_src_losses)
+        src_log_vars = self._rename_results_dict(src_log_vars, 'src')
         log_vars.update(src_log_vars)
 
         # Compute batch target adversarial loss
         gt_target_disc = torch.ones(batch_size, device=dev, dtype=torch.long)
         clean_target_disc_losses = self.get_model().forward_train(
             target_img, target_img_metas, None, gt_target_disc)
+
         target_disc_loss, target_disc_log_vars = self._parse_losses(clean_target_disc_losses)
+        target_disc_log_vars = self._rename_results_dict(target_disc_log_vars, 'target')
         log_vars.update(target_disc_log_vars)
 
         # Compute final loss
         loss = src_loss + target_disc_loss # M-TODO probably make this weighted with CFG params - but idk, should the weighting go here? Maybe the weighting that increases by total steps should
         loss.backward()
 
+        # Add final summated loss to log vars
+        log_vars['loss'] = loss.item()
+
         return log_vars
+
+    @staticmethod
+    def _rename_results_dict(results_dict: OrderedDict, dist):
+        """Adds distribution name 'dist' to all variables in the results dictionary."""
+        assert dist in ['src', 'target']
+
+        renamed_results_dict = OrderedDict()
+
+        for var in results_dict.keys():
+            renamed_results_dict[f'{dist}.{var}'] = results_dict[var]
+        
+        return renamed_results_dict

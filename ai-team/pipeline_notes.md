@@ -137,7 +137,7 @@ AttributeError: 'str' object has no attribute 'shape'
 - We need to add a "train only domain classifier" functionality to make sure we can train on the target set
 - All of this should then be pretty reusable for the cross-attention experiments.
 
-## Creating a custom Model fully for Domain Adversarial
+## Should we create a custom model parent class fully for Domain Adversarial Training?
 This lets us do the following cool things:
 - Properly calculate DA loss + seg loss (rather than hacking it)
   - Doing it for this reason! And others I've already forgotten.
@@ -150,6 +150,11 @@ This lets us do the following cool things:
 - **WAIT**! Can't we just do this using a domain adversarial decode head superclass?
   - If we do this, the encoder can't have any domain adversarial bits
   - We also can't really do "train only the discriminator", since that information needs to get to the decode head somehow    
+
+## Logging
+The runner takes in the logger. The logger then displays everything available at a certain point in time, but not quite sure when yet.
+
+The normal optimizer callback happens [here](/home/moritz/miniconda3/envs/daformer/lib/python3.8/site-packages/mmcv/runner/hooks/optimizer.py). We should never get here during adversarial training.
 
 ## Things I don't quite know yet
 - Where should we apply weighting to the adversarial loss? Should we weight the actual loss output, apply it as part of gradient reversal, or something else?
