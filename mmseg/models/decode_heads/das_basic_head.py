@@ -14,42 +14,10 @@ from mmcv.runner import BaseModule, force_fp32
 
 from mmseg.ops import resize
 from ..builder import HEADS
+from ..builder import build_discriminator
 from ..losses import CrossEntropyLoss
 from .decode_head import BaseDecodeHead
 
-
-# M-TODO this should probably go somewhere else
-from torch.autograd import Function
-class GradientReversalFunction(Function):
-    """Gradient reversal function. Acts as identity transform during forward pass, 
-    but multiplies gradient by -alpha during backpropagation. this means alpha 
-    effectively becomes the loss weight during training.
-    """
-    @staticmethod
-    def forward(ctx, x, alpha):
-        ctx.save_for_backward(x, alpha)
-        return x
-    
-    @staticmethod
-    def backward(ctx, grad_output):
-        grad_input = None
-        _, alpha = ctx.saved_tensors
-        if ctx.needs_input_grad[0]:
-            grad_input = - alpha*grad_output
-        return grad_input, None
-
-revgrad = GradientReversalFunction.apply
-
-class GradientReversal(nn.Module):
-    def __init__(self, alpha=1.):
-        super().__init__()
-        
-        self.alpha = torch.tensor(alpha, requires_grad=False)
-
-    def forward(self, x):
-        return revgrad(x, self.alpha)
-
-## END GRADIENT REVERSAL ##
 
 class MLP(nn.Module):
     """Linear Embedding."""
@@ -59,62 +27,10 @@ class MLP(nn.Module):
         self.proj = nn.Linear(input_dim, embed_dim)
 
     def forward(self, x):
-        # print("-" * 20)
-        # print(f"x shape before flatten: {x.shape}")
-        # print("-" * 20)
         x = x.flatten(2).transpose(1, 2).contiguous() # M-TODO: Figure out why they do flatten then transpose then contiguous?
-        # print("-" * 20)
-        # print(f"x shape after flatten: {x.shape}")
-        # print("-" * 20)
-        # print("-" * 20)
-        # print("Proj:")
-        # print(self.proj)
-        # print("-" * 20)
         x = self.proj(x)
         return x
 
-# M-TODO also put this somewhere else
-from mmcv.runner import BaseModule
-class AdversarialDiscriminator(BaseModule):
-    @staticmethod
-    def build_discriminator(cfg): # M-TODO consider making this part of the module registration system in MMCV, would eventually call MODELS.build() or something like that (like UDA itself)
-        return AdversarialDiscriminator(**cfg)
-
-    def __init__(self, in_channels, intermed_channels, init_cfg=None, classes=2): # I think actual weight initialisation will happen in base_module.py??
-        super(AdversarialDiscriminator, self).__init__(init_cfg)
-
-        # M-TODO use weights (because we're gonna need to pretrain this guy anyway) - NOTE: I think just passing in init_cfg into __init__ does this
-        # M-TODO does this get put on GPU automatically?
-
-        self.grad_rev = GradientReversal()
-
-        self.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=intermed_channels, kernel_size=3, padding=1)
-        self.relu = nn.ReLU()
-        self.conv2 = nn.Conv2d(in_channels=intermed_channels, out_channels=classes, kernel_size=3, padding=1)
-        
-        self.gpool = nn.AdaptiveAvgPool2d(output_size=1)
-
-    # M-TODO random weight initialisation in a defined manner? rather than just using the defaults
-
-    def forward(self, x:torch.Tensor):
-        x = self.grad_rev(x)
-
-        # print('~' * 20)
-        # print(f"input shape: '{x.shape}'")
-        # print('~' * 20)
-
-        x = self.conv1(x)
-        x = self.relu(x)
-        x = self.conv2(x)
-
-        x = self.gpool(x)
-        x = torch.squeeze(x)
-
-        # print('~' * 20)
-        # print(f"final pred shape: '{x.shape}'")
-        # print('~' * 20)
-
-        return x
 
 @HEADS.register_module()
 class DASBasicHead(BaseDecodeHead):
@@ -145,10 +61,11 @@ class DASBasicHead(BaseDecodeHead):
 
         self.linear_pred = nn.Conv2d(
             embedding_dim, self.num_classes, kernel_size=1)
-
+        
+        # Build discriminator
         discriminator_params = decoder_params['discriminator']
-        # M-FIXME check if in_channels is the right thing to use
-        self.discriminator = AdversarialDiscriminator(in_channels=self.in_channels[-1], intermed_channels=discriminator_params['intermed_channels'])
+        discriminator_params['in_channels'] = self.in_channels[-1]
+        self.discriminator = build_discriminator(discriminator_params)
 
         self.loss_disc = CrossEntropyLoss() # M-TODO figure out if it's ok for this to be hardcoded
 

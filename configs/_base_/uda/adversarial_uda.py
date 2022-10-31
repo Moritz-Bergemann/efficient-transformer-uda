@@ -5,9 +5,5 @@
 # Baseline Adversarial UDA
 uda = dict(
     type='AdversarialUDA',
-    discriminator=dict(
-        in_features=256,
-        hidden_features=256
-    )
 )
 use_ddp_wrapper = True # M-TODO not sure what this does
