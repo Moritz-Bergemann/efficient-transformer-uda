@@ -12,12 +12,12 @@ Install miniconda (on my Linux, I installed using the source sh script.)
 Create a new conda environment (python 3.8)
 
 ```sh
-conda create --name daformer python=3.8
+conda create --name das python=3.8
 ```
 
 Install pytorch
 ```sh
-conda install pytorch torchvision torchaudio cudatoolkit=11.1 -c pytorch-lts -c nvidia
+conda install pytorch torchvision torchaudio cudatoolkit=10.2 -c pytorch-lts -c nvidia
 ```
 
 Install mmcv locally (mmsegmentation is in this repository, so does not need to be installed)
@@ -31,7 +31,7 @@ Install other dependencies (this is how we're currently doing it)
 pip install -r requirements.txt
 ```
 
-Install the cityscapes and GTA datasets from [here](https://www.cityscapes-dataset.com/downloads/) and [here](https://download.visinf.tu-darmstadt.de/data/from_games/. Symlink/move them to `data/citsyscapes` and `data/gta`.
+Install the cityscapes and GTA datasets from [here](https://www.cityscapes-dataset.com/downloads/) and [here](https://download.visinf.tu-darmstadt.de/data/from_games/). Symlink/move them to `data/citsyscapes` and `data/gta`.
 
 Then, run the dataset conversion scripts:
 ```sh
