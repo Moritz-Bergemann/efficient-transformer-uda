@@ -2,7 +2,7 @@ _base_ = [
     # All the defaults
     '../_base_/default_runtime.py',
     # SegFormer to use
-    '../_base_/models/das_basic.py', # M-TODO maybe make this b3 or something and see how we go
+    '../_base_/models/das_basic_mitb4.py', # M-TODO maybe make this b3 or something and see how we go
     # Adversarial UDA
     '../_base_/uda/adversarial_uda.py',
     # GTA->Cityscapes Data Loading (256x256 for testing purposes)
