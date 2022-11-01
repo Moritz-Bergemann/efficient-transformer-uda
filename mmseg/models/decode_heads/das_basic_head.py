@@ -15,7 +15,7 @@ from mmcv.runner import BaseModule, force_fp32
 from mmseg.ops import resize
 from ..builder import HEADS
 from ..builder import build_discriminator
-from ..losses import CrossEntropyLoss
+from ..losses import CrossEntropyLoss, accuracy
 from .decode_head import BaseDecodeHead
 
 
@@ -143,42 +143,21 @@ class DASBasicHead(BaseDecodeHead):
             Tensor: Output segmentation map.
         """
 
-        print("we are inside forward_test!")
-        seg_pred, _ = self.forward(inputs, compute_disc=False) # Don't compute discriminator features - their only point is to align feature space during training
+        seg_pred, _ = self.forward(inputs, compute_disc=True) # Don't compute discriminator features - their only point is to align feature space during training
 
         return seg_pred
 
     @force_fp32(apply_to=('seg_logit', 'domain_logit', )) # M-TODO loss should be weighted by the end of this function. Remember that loss function has a weight attribute? So maybe do it there
     def losses(self, seg_logit, seg_label, domain_logit, domain_label, seg_weight=None):
         """Compute segmentation loss + adversarial loss. If either input (segmentation & domain label) is None, the respective loss is not computed."""
-        # print('~'*20)
-        # try:
-        #     print(f"seg_logit device: {seg_logit.device}")
-        # except: pass
-        # try:
-        #     print(f"seg_label device: {seg_label.device}")
-        # except: pass
-        # try:
-        #     print(f"domain_logit device: {domain_logit.device}")
-        # except: pass
-        # try:
-        #     print(f"domain_label device: {domain_label.device}")
-        # except: pass
-        # print('~'*20)
-
         if seg_logit != None:
             loss = super().losses(seg_logit, seg_label, seg_weight=seg_weight)
         else:
             loss = dict()
         
-        # print('-' *  20)
-        # print(f"domain_logit shape is {domain_logit.shape}")
-        # print(f"domain_label shape is {domain_label.shape}")
-        # print(f"domain_label:")
-        # print(domain_label)
-        # print('-' *  20)
-
         if domain_logit != None:
             loss['loss_adv'] = self.loss_disc(domain_logit, domain_label)
+
+            loss['acc_adv'] = accuracy(domain_logit, domain_label)
         
         return loss
