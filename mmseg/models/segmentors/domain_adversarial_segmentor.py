@@ -80,3 +80,11 @@ class DomainAdversarialSegmentor(EncoderDecoder):
             losses.update(loss_aux)
 
         return losses
+    
+    def set_iter_tracker(self, iter_tracker):
+        """Defines iteration tracker for encoder/decoder respectively, if they require one."""
+        if callable(getattr(self.backbone, 'set_iter_tracker', None)):
+            self.backbone.set_iter_tracker(iter_tracker)
+        
+        if callable(getattr(self.decode_head, 'set_iter_tracker', None)):
+            self.decode_head.set_iter_tracker(iter_tracker)

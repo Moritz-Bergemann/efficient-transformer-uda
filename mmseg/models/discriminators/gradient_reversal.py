@@ -1,5 +1,5 @@
 # M-FIXME maybe this shouldn't go here, but this is where it's going.
-
+from numpy import dtype
 import torch
 from torch import nn
 from torch.autograd import Function
@@ -25,10 +25,16 @@ class GradientReversalFunction(Function):
 revgrad = GradientReversalFunction.apply
 
 class GradientReversal(nn.Module):
-    def __init__(self, alpha=1.):
+    def __init__(self, adaptation_factor=1.):
         super().__init__()
+
+        self.adaptation_factor = adaptation_factor
         
-        self.alpha = torch.tensor(alpha, requires_grad=False)
+        # Set the default adaptation factor to max
+        self.adaptation_factor = torch.tensor(adaptation_factor, requires_grad=False, dtype=torch.float32)
 
     def forward(self, x):
-        return revgrad(x, self.alpha)
+        return revgrad(x, self.adaptation_factor)
+
+    def set_adaptation_factor(self, adaptation_factor):
+        self.adaptation_factor = torch.tensor(adaptation_factor, requires_grad=False, dtype=torch.float32)

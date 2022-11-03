@@ -5,9 +5,9 @@ from ..builder import DISCRIMINATORS
 from .discriminator import Discriminator
 
 @DISCRIMINATORS.register_module()
-class LinearDiscriminator:
-    def __init__(self, in_channels, intermed_channels, init_cfg, classes=2):
-        super(LinearDiscriminator, self).__init__(init_cfg)
+class LinearDiscriminator(Discriminator):
+    def __init__(self, in_channels, intermed_channels, init_cfg, max_adaptation_factor, classes=2):
+        super(LinearDiscriminator, self).__init__(max_adaptation_factor, init_cfg)
 
         # Apply channel-wise linear layers
         self.lin1 = nn.Linear(in_channels, intermed_channels)

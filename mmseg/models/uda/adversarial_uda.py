@@ -6,6 +6,19 @@ from torch import nn
 from mmcv.runner import BaseModule
 from copy import deepcopy
 
+class IterTracker:
+    def __init__(self):
+        self.iter = 0
+
+        self.iter_listeners = []
+
+    def add_iter_listener(self, listener):
+        self.iter_listeners.append(listener)
+
+    def broadcast_iter(self):
+        for listener in self.iter_listeners:
+            listener.iter_update(self.iter)
+
 
 @UDA.register_module()
 class AdversarialUDA(UDADecorator):
@@ -13,6 +26,11 @@ class AdversarialUDA(UDADecorator):
     def __init__(self, **cfg):
         # Build model etc in UDADecorator
         super(AdversarialUDA, self).__init__(**cfg)
+
+        self.iter_tracker = IterTracker()
+        self.num_iters = cfg['num_iters']
+
+        self.get_model().set_iter_tracker(self.iter_tracker)
 
         # M-TODO add something about the loss weighting schedule here (i.e. weigh target loss more later? Is this stupid?)
 
@@ -73,6 +91,9 @@ class AdversarialUDA(UDADecorator):
         batch_size = img.shape[0]
         dev = img.device
 
+        # Update schedules based on iteration
+        self.iter_tracker.broadcast_iter() # M-TODO maybe only do this every n training steps?
+
         # Source dataset
         # Compute batch source segmentation and adversarial loss
         gt_src_disc = torch.zeros(batch_size, device=dev, dtype=torch.long)
@@ -98,6 +119,8 @@ class AdversarialUDA(UDADecorator):
 
         # Add final summated loss to log vars
         log_vars['loss'] = loss.item()
+
+        self.iter_tracker.iter += 1
 
         return log_vars
 

@@ -161,3 +161,6 @@ class DASBasicHead(BaseDecodeHead):
             loss['acc_adv'] = accuracy(domain_logit, domain_label)
         
         return loss
+
+    def set_iter_tracker(self, iter_tracker):
+        self.discriminator.set_iter_tracker(iter_tracker)
