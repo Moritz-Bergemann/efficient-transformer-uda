@@ -18,7 +18,6 @@ seed = 0
 
 # Set domain discriminator input channels
 uda = dict(
-    max_iters=300,
     discriminator=dict(
         intermed_channels=32,
         max_adaptation_factor=1.
