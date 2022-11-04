@@ -7,7 +7,9 @@ from mmcv.runner import BaseModule
 from copy import deepcopy
 
 class IterTracker:
-    def __init__(self):
+    def __init__(self, max_iters):
+        self.max_iters = max_iters
+
         self.iter = 0
 
         self.iter_listeners = []
@@ -17,7 +19,7 @@ class IterTracker:
 
     def broadcast_iter(self):
         for listener in self.iter_listeners:
-            listener.iter_update(self.iter)
+            listener.iter_update(self.iter, self.max_iters)
 
 
 @UDA.register_module()
@@ -27,8 +29,8 @@ class AdversarialUDA(UDADecorator):
         # Build model etc in UDADecorator
         super(AdversarialUDA, self).__init__(**cfg)
 
-        self.iter_tracker = IterTracker()
-        self.num_iters = cfg['num_iters']
+        max_iters = cfg['max_iters']
+        self.iter_tracker = IterTracker(max_iters)
 
         self.get_model().set_iter_tracker(self.iter_tracker)
 

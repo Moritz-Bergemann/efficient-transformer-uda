@@ -28,7 +28,7 @@ class Discriminator(BaseModule):
     def iter_update(self, iter, max_iter):
         p = iter / max_iter
 
-        self.grad_rev.update_adaptation_factor(p)
+        self.update_adaptation_factor(p)
 
     def update_adaptation_factor(self, p):
         """Update adaptation factor based on iteration value, as in https://arxiv.org/abs/1409.7495"""
