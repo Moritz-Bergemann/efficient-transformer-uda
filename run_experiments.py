@@ -43,6 +43,13 @@ if __name__ == '__main__':
         default=None,
         help='Path to config file',
     )
+
+    parser.add_argument(
+        '--gpu-id',
+        type=int,
+        default=0,
+        help='ID of GPU to use for experiment.'
+    )
     parser.add_argument(
         '--machine', type=str, choices=['local'], default='local')
     parser.add_argument('--debug', action='store_true')
@@ -103,7 +110,7 @@ if __name__ == '__main__':
     if args.machine == 'local':
         for i, cfg in enumerate(cfgs):
             print('Run job {}'.format(cfg['name']))
-            train.main([config_files[i]])
+            train.main([config_files[i], '--gpu-ids', f'{args.gpu_id}'])
             torch.cuda.empty_cache()
     else:
         raise NotImplementedError(args.machine)
