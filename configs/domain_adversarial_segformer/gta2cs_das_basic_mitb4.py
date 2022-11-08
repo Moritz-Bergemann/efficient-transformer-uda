@@ -33,14 +33,14 @@ optimizer = dict(
             pos_block=dict(decay_mult=0.0),
             norm=dict(decay_mult=0.0))))
 n_gpus = 1
-runner = dict(type='IterBasedRunner', max_iters=300)
+runner = dict(type='IterBasedRunner', max_iters=40000)
 
 # Logging Configuration
-checkpoint_config = dict(by_epoch=False, interval=300, max_keep_ckpts=1)
-evaluation = dict(interval=150, metric='mIoU')
+checkpoint_config = dict(by_epoch=False, interval=20000, max_keep_ckpts=1)
+evaluation = dict(interval=4000, metric='mIoU')
 
 # Meta Information for Result Analysis
-name = 'gta2cs_das'
+name = 'gta2cs_das_basic_mitb4'
 exp = 'basic'
 name_dataset = 'gta2cityscapes'
 name_architecture = 'basic_domain_adversarial_segformer'
