@@ -8,12 +8,13 @@ from ..builder import DISCRIMINATORS, build_discriminator
 
 @DISCRIMINATORS.register_module()
 class MultiHeadDiscriminatorWrapper(Discriminator):
-    def __init__(self, disc_configs, init_cfg):
+    def __init__(self, disc_configs, in_channels, init_cfg):
         super(MultiHeadDiscriminatorWrapper, self).__init__(init_cfg)
 
         self.discriminators = []
 
         for disc_config in disc_configs:
+            disc_config['in_channels'] = in_channels
             self.discriminators.append(build_discriminator(disc_config))
     
     def forward(self, **xes):
@@ -23,6 +24,8 @@ class MultiHeadDiscriminatorWrapper(Discriminator):
         for x, discriminator in zip(xes, self.discriminators):
             preds.append(discriminator(x))
 
+        preds = torch.stack(preds)
+        
         return preds
     
     def iter_update(self, iter, max_iter):
