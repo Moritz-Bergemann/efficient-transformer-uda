@@ -25,7 +25,9 @@ model = dict(
             discriminator=dict(),
             # The following are from SegFormer. M-TODO verify!
             embed_dim=768, 
-            conv_kernel_size=1
+            conv_kernel_size=1,
+            loss_discriminator=dict(
+                type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
         ),
         loss_decode=dict(
             type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),

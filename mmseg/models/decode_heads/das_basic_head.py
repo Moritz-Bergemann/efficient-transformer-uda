@@ -14,7 +14,7 @@ from mmcv.runner import BaseModule, force_fp32
 
 from mmseg.ops import resize
 from ..builder import HEADS
-from ..builder import build_discriminator
+from ..builder import build_discriminator, build_loss
 from ..losses import CrossEntropyLoss, accuracy
 from .decode_head import BaseDecodeHead
 
@@ -66,8 +66,7 @@ class DASBasicHead(BaseDecodeHead):
         discriminator_params = decoder_params['discriminator']
         discriminator_params['in_channels'] = self.in_channels[-1]
         self.discriminator = build_discriminator(discriminator_params)
-
-        self.loss_disc = CrossEntropyLoss() # M-TODO figure out if it's ok for this to be hardcoded
+        self.loss_disc = build_loss(decoder_params['loss_discriminator']) # M-TODO figure out if it's ok for this to be hardcoded
 
     def forward(self, inputs, compute_seg=True, compute_disc=True):
         """Function to compute inference. Optionally computes either segmentation or adversarial discrimination based on input features"""
