@@ -22,10 +22,7 @@ model = dict(
         norm_cfg=norm_cfg,
         align_corners=False,
         decoder_params=dict(
-            discriminator=dict(
-                type='ConvDiscriminator',
-                intermed_channels=32,
-                max_adaptation_factor=1.,),
+            discriminator=dict(),
             # The following are from SegFormer. M-TODO verify!
             embed_dim=768, 
             conv_kernel_size=1
