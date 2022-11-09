@@ -1,4 +1,5 @@
 import torch
+from torch import nn
 
 from mmcv.runner import BaseModule
 
@@ -8,16 +9,16 @@ from ..builder import DISCRIMINATORS, build_discriminator
 
 @DISCRIMINATORS.register_module()
 class MultiHeadDiscriminatorWrapper(Discriminator):
-    def __init__(self, disc_configs, in_channels, init_cfg):
-        super(MultiHeadDiscriminatorWrapper, self).__init__(init_cfg)
+    def __init__(self, disc_configs, in_channels_list, max_adaptation_factor=-1., init_cfg=None):
+        super(MultiHeadDiscriminatorWrapper, self).__init__(max_adaptation_factor, init_cfg)
+        assert len(disc_configs) == len(in_channels_list)
+        self.discriminators = nn.ModuleList()
 
-        self.discriminators = []
-
-        for disc_config in disc_configs:
+        for disc_config, in_channels in zip(disc_configs, in_channels_list):
             disc_config['in_channels'] = in_channels
             self.discriminators.append(build_discriminator(disc_config))
     
-    def forward(self, **xes):
+    def forward(self, xes):
         assert len(xes) == len(self.discriminators)
 
         preds = []
