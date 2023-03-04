@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 from mmcv.cnn import ConvModule
 from mmcv.runner import BaseModule, force_fp32
+from mmcv.utils import print_log
 
 from mmseg.ops import resize
 from abc import ABC, abstractmethod
@@ -113,19 +114,29 @@ class DASHead(BaseDecodeHead, ABC):
     @force_fp32(apply_to=('seg_logit', 'domain_logit', )) # M-TODO loss should be weighted by the end of this function. Remember that loss function has a weight attribute? So maybe do it there
     def losses(self, seg_logit, seg_label, domain_logit, domain_label, seg_weight=None):
         """Compute segmentation loss + adversarial loss. If either input (segmentation & domain label) is None, the respective loss is not computed."""
-        if seg_logit != None:
+        debug_phase = ""
+        if seg_label != None:
             loss = super().losses(seg_logit, seg_label, seg_weight=seg_weight)
+            debug_phase = "source"
         else:
             loss = dict()
-        
-        if domain_logit != None:
+            debug_phase = "target"
+        # print("[DEBUG] we are in", debug_phase, "phase!")
+        if domain_label != None:
             self.compute_domain_losses(loss, domain_logit, domain_label)
         
         return loss
 
-
     def compute_domain_losses(self, loss_dict, domain_logit, domain_label):
+        # print_log("="*20)
+        # print_log("[DEBUG] Domain logit is:")
+        # print_log(domain_logit)
+        # print_log("[DEBUG] Domain label is:")
+        # print_log(domain_label)
         loss_dict['loss_adv'] = self.loss_disc(domain_logit, domain_label)
+        # print_log("[DEBUG] Therefore, the adversarial loss is:")
+        # print_log(loss_dict['loss_adv'])
+        # print_log("="*20)
 
         loss_dict['acc_adv'] = accuracy(domain_logit, domain_label)
 

@@ -30,9 +30,13 @@ class AdversarialUDA(UDADecorator):
         super(AdversarialUDA, self).__init__(**cfg)
 
         max_iters = cfg['max_iters']
+
         self.iter_tracker = IterTracker(max_iters)
 
-        self.get_model().set_iter_tracker(self.iter_tracker)
+        self.adaptation_factor_growth = cfg.get('adaptation_factor_growth', True)
+
+        if self.adaptation_factor_growth:
+            self.get_model().set_iter_tracker(self.iter_tracker)
 
         # M-TODO add something about the loss weighting schedule here (i.e. weigh target loss more later? Is this stupid?)
 
@@ -94,7 +98,8 @@ class AdversarialUDA(UDADecorator):
         dev = img.device
 
         # Update schedules based on iteration
-        self.iter_tracker.broadcast_iter() # M-TODO maybe only do this every n training steps?
+        if self.adaptation_factor_growth:
+            self.iter_tracker.broadcast_iter() # M-TODO maybe only do this every n training steps?
 
         # Source dataset
         # Compute batch source segmentation and adversarial loss

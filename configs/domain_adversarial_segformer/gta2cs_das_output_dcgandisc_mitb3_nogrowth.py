@@ -2,7 +2,7 @@ _base_ = [
     # All the defaults
     '../_base_/default_runtime.py',
     # SegFormer to use
-    '../_base_/models/das_multi_mitb4.py', # M-TODO maybe make this b3 or something and see how we go
+    '../_base_/models/das_output_mitb3.py', # M-TODO maybe make this b3 or something and see how we go
     # Adversarial UDA
     '../_base_/uda/adversarial_uda.py',
     # GTA->Cityscapes Data Loading (256x256 for testing purposes)
@@ -16,30 +16,20 @@ _base_ = [
 # Random Seed
 seed = 0
 
+# Turn off adapation factor growth
+uda = dict(
+    adaptation_factor_growth=False
+)
+
 # Set domain discriminator input channels
 model = dict(
     decode_head=dict(
         decoder_params=dict(
             discriminator=dict(
-                type='MultiHeadDiscriminatorWrapper',
-                disc_configs=[
-                    dict(
-                        type='ConvDiscriminator',
-                        intermed_channels=32,
-                        max_adaptation_factor=0.25,),
-                    dict(
-                        type='ConvDiscriminator',
-                        intermed_channels=32,
-                        max_adaptation_factor=0.25,),
-                    dict(
-                        type='ConvDiscriminator',
-                        intermed_channels=32,
-                        max_adaptation_factor=0.25,),
-                    dict(
-                        type='ConvDiscriminator',
-                        intermed_channels=32,
-                        max_adaptation_factor=0.25,),
-                ]))))
+                type='DCGANDiscriminator',
+                channel_depths=[64, 128, 256, 512, 2],
+                in_channels=19, # FIXME change
+                max_adaptation_factor=0.001,))))
 
 optimizer_config = None
 optimizer = dict(
@@ -57,11 +47,11 @@ checkpoint_config = dict(by_epoch=False, interval=20000, max_keep_ckpts=1)
 evaluation = dict(interval=4000, metric='mIoU')
 
 # Meta Information for Result Analysis
-name = 'gta2cs_das_multi_convdisc_mitb4'
+name = 'gta2cs_das_output_dcgandisc_mitb3'
 exp = 'domain_adversarial_segformer'
 name_dataset = 'gta2cityscapes'
 name_architecture = 'basic_domain_adversarial_segformer'
 name_encoder = 'mitb4'
-name_decoder = 'das_multi_decoder'
+name_decoder = 'das_basic_decoder'
 name_uda = 'basic_domain_adversarial_discriminator'
 name_opt = 'adamw_6e-05_pmTrue_poly10warm_1x2_40k'

@@ -1,6 +1,6 @@
 _base_ = [
     "../_base_/default_runtime.py",
-    "../_base_/models/segformer_b4.py",
+    "../_base_/models/segformer_b3.py",
     "../_base_/datasets/gta_to_cityscapes_512x512.py",
     "../_base_/schedules/adamw.py",
     "../_base_/schedules/poly10warm.py"
@@ -42,11 +42,11 @@ evaluation = dict(
     interval = 4000,
     metric = "mIoU"
 )
-name = "gta2cs_source-only_segformer_mitb4_poly10warm_s0_66676"
+name = "gta2cs_sourceonly_mitb3"
 exp = 'baseline'
 name_dataset = "gta2cityscapes"
-name_architecture = "segformer_mitb4"
-name_encoder = "mitb4"
+name_architecture = "segformer_mitb3"
+name_encoder = "mitb3"
 name_decoder = "segformer"
 name_uda = "source-only"
 name_opt = "adamw_6e-05_pmTrue_poly10warm_1x2_0k"

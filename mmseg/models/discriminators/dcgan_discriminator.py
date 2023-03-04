@@ -1,9 +1,11 @@
 import torch
-from torch.nn import LeakyReLU, Conv2d, BatchNorm2d, Identity, AdaptiveAvgPool2d
+from torch.nn import LeakyReLU, Conv2d, BatchNorm2d, Identity, AdaptiveAvgPool2d, ModuleList
 
+from ..builder import DISCRIMINATORS
 from .discriminator import Discriminator
 
 
+@DISCRIMINATORS.register_module()
 class DCGANDiscriminator(Discriminator):
     """Based on discriminator implementation of "Unsupervised Representation Learning
     with Deep Convolutional Generative Adversarial Networks" used in
@@ -26,7 +28,7 @@ class DCGANDiscriminator(Discriminator):
         # Get in channels for each convolution
         in_channel_depths = [in_channels] + channel_depths[:-1]
 
-        self.convs: list[Conv2d] = [
+        self.convs: ModuleList[Conv2d] = ModuleList([
             Conv2d(
                 in_channels=in_channel_depth,
                 out_channels=channel_depth,
@@ -36,21 +38,24 @@ class DCGANDiscriminator(Discriminator):
             for in_channel_depth, channel_depth, kernel_size, stride in zip(
                 in_channel_depths, channel_depths, kernel_sizes, strides
             )
-        ]
+        ])
 
-        self.relus: list[LeakyReLU] = [
-            LeakyReLU(negative_slope=0.2) for i in range(len(channel_depths))
-        ]
+        self.relus: ModuleList[LeakyReLU] = ModuleList([
+            LeakyReLU(negative_slope=0.2) for i in range(len(channel_depths) - 1)
+        ])
+        self.relus.append(Identity())
 
-        self.batch_norms: list[BatchNorm2d]
+        self.batch_norms: ModuleList[BatchNorm2d]
         if use_batch_norm:  # There was no batchnorm in original implementation
             # Don't do batch normalisation on the last layer
-            self.batch_norms = [
+            self.batch_norms = ModuleList([
                 BatchNorm2d(channel_depth) for channel_depth in channel_depths[:-1]
-            ]
+            ])
             self.batch_norms.append(Identity())
         else:
-            self.batch_norms = None
+            self.batch_norms = ModuleList([
+                Identity() for channel_depth in channel_depths
+            ])
 
         self.gpool = AdaptiveAvgPool2d(output_size=1)
 
@@ -58,11 +63,11 @@ class DCGANDiscriminator(Discriminator):
         # Apply gradient reversal
         x = super().forward(x)
 
-        for conv, relu, batch_norm in self.convs, self.relus, self.batch_norms:
+        for conv, relu, batch_norm in zip(self.convs, self.relus, self.batch_norms):
             x = conv(x)
             x = relu(x)
-            if self.batch_norms is not None:
-                x = batch_norm(x)
+            # if self.batch_norms is not None:
+            x = batch_norm(x)
 
         # Reduce to single one-hot prediction
         x = self.gpool(x)

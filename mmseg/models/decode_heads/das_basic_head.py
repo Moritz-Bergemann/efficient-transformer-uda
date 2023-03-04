@@ -30,8 +30,10 @@ class DASBasicHead(DASHead):
         discriminator_params = kwargs['decoder_params']['discriminator']
         loss_disc_cfg = kwargs['decoder_params']['loss_discriminator']
 
+        # Build discriminator appropriately to take in from final encoder output channel
         discriminator_params['in_channels'] = self.in_channels[-1]
         self.discriminator = build_discriminator(discriminator_params)
+        
         self.loss_disc = build_loss(loss_disc_cfg)
 
     def forward(self, inputs, compute_seg=True, compute_disc=True):

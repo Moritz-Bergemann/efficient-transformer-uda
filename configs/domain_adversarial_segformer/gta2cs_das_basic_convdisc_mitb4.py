@@ -41,7 +41,7 @@ checkpoint_config = dict(by_epoch=False, interval=20000, max_keep_ckpts=1)
 evaluation = dict(interval=4000, metric='mIoU')
 
 # Meta Information for Result Analysis
-name = 'gta2cs_das_basic_mitb4'
+name = 'gta2cs_das_basic_convdisc_mitb4'
 exp = 'domain_adversarial_segformer'
 name_dataset = 'gta2cityscapes'
 name_architecture = 'basic_domain_adversarial_segformer'

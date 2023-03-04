@@ -14,6 +14,7 @@ from .uper_head import UPerHead
 from .das_head import DASHead
 from .das_basic_head import DASBasicHead
 from .das_multi_head import DASMultiHead
+from .das_output_head import DASOutputHead
 
 __all__ = [
     'FCNHead',
@@ -29,4 +30,5 @@ __all__ = [
     'DASHead',
     'DASBasicHead',
     'DASMultiHead',
+    'DASOutputHead',
 ]

@@ -14,10 +14,14 @@ def cross_entropy(pred,
                   class_weight=None,
                   reduction='mean',
                   avg_factor=None,
+                  do_softmax=False,
                   ignore_index=-100):
     """The wrapper function for :func:`F.cross_entropy`"""
     # class_weight is a manual rescaling weight given to each class.
     # If given, has to be a Tensor of size C element-wise losses
+    if do_softmax:
+        pred = F.softmax(pred)
+
     loss = F.cross_entropy(
         pred,
         label,
@@ -62,6 +66,7 @@ def binary_cross_entropy(pred,
                          reduction='mean',
                          avg_factor=None,
                          class_weight=None,
+                         do_softmax=False,
                          ignore_index=255):
     """Calculate the binary CrossEntropy loss.
 
@@ -105,6 +110,7 @@ def mask_cross_entropy(pred,
                        reduction='mean',
                        avg_factor=None,
                        class_weight=None,
+                       do_softmax=False,
                        ignore_index=None):
     """Calculate the CrossEntropy loss for masks.
 
@@ -158,6 +164,7 @@ class CrossEntropyLoss(nn.Module):
                  use_mask=False,
                  reduction='mean',
                  class_weight=None,
+                 do_softmax=False,
                  loss_weight=1.0):
         super(CrossEntropyLoss, self).__init__()
         assert (use_sigmoid is False) or (use_mask is False)
@@ -165,6 +172,7 @@ class CrossEntropyLoss(nn.Module):
         self.use_mask = use_mask
         self.reduction = reduction
         self.loss_weight = loss_weight
+        self.do_softmax = do_softmax
         self.class_weight = get_class_weight(class_weight)
 
         if self.use_sigmoid:
@@ -196,5 +204,6 @@ class CrossEntropyLoss(nn.Module):
             class_weight=class_weight,
             reduction=reduction,
             avg_factor=avg_factor,
+            do_softmax=self.do_softmax,
             **kwargs)
         return loss_cls

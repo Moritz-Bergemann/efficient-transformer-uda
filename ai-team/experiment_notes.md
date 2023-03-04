@@ -12,7 +12,7 @@ Install miniconda (on my Linux, I installed using the source sh script.)
 Create a new conda environment (python 3.8)
 
 ```sh
-conda create --name das python=3.8
+conda create --name das python=3.8; conda activate das
 ```
 
 Install pytorch
@@ -45,7 +45,35 @@ Why don't we just do the domain classifier like SegFormer do theirs?
 - Alternatively, just do a real simple conv based one
     - In the thesis would need to discuss effect of type of features on the conv 
 
+For utility:
+```
+--gpu-id 0
+--gpu-id 1
+```
+
+# Experiments
+## Experiment 0 - Baseline
+
+
+### Notes
+- Training is quite unstable - large (~5% differences in mIoU between runs)
+
+## GTA2CS, MiTB5
+```sh
+python run_experiments.py --config configs/baseline/gta2cs_sourceonly_mitb5.py --gpu-id 0
+```
+
+## GTA2CS, MiTB4
+```sh
+python run_experiments.py --config configs/baseline/gta2cs_sourceonly_mitb4.py --gpu-id 0
+```
+
 ## Experiment 1 - Domain Adversarial Loss
+
+### With RCS
+```
+python run_experiments.py --config configs/domain_adversarial_segformer/gta2cs_das_basic_convdisc_rcs_mitb4.py --gpu-id 1
+```
 ## Experiment 2 - Patch-wise Domain Adversarial Loss
 ## Experiment 3 - Patch-wise Domain Invariant Feature Encouragement (a la TVT)
 ## Experiemnt 3 - Patch-wise Feature Distances
