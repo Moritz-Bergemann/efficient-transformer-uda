@@ -1,5 +1,5 @@
 import torch
-from torch.nn import LeakyReLU, Conv2d, BatchNorm2d, Identity, AdaptiveAvgPool2d, ModuleList
+from torch.nn import LeakyReLU, Conv2d, BatchNorm2d, Identity, AdaptiveAvgPool2d, ModuleList, Sigmoid
 
 from ..builder import DISCRIMINATORS
 from .discriminator import Discriminator
@@ -59,6 +59,8 @@ class DCGANDiscriminator(Discriminator):
 
         self.gpool = AdaptiveAvgPool2d(output_size=1)
 
+        self.sigmoid = Sigmoid()
+
     def forward(self, x):
         # Apply gradient reversal
         x = super().forward(x)
@@ -72,5 +74,7 @@ class DCGANDiscriminator(Discriminator):
         # Reduce to single one-hot prediction
         x = self.gpool(x)
         x = torch.squeeze(x)
+
+        x = self.sigmoid(x) # FIXME FIXME FIXME REMOVE ME AHHHHHHH
 
         return x

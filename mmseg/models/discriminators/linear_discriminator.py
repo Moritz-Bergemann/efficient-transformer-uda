@@ -31,7 +31,8 @@ class LinearDiscriminator(Discriminator):
         x = self.relu1(x)
         x = self.lin2(x)
         x = self.relu2(x)
-
+        
+        # FIXME why tf do we do this instead of just doing linear to 2 classes?
         # Reshape to c x h x w
         x = x.reshape(n, -1, h, w)
 

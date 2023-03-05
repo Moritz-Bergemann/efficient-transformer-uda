@@ -157,6 +157,8 @@ class CrossEntropyLoss(nn.Module):
         class_weight (list[float] | str, optional): Weight of each class. If in
             str format, read them from a file. Defaults to None.
         loss_weight (float, optional): Weight of the loss. Defaults to 1.0.
+        do_softmax (bool, optional): Whether or not to use softmax before computing loss. Defaults to false.
+        ensemble (bool, optional): If predictions include ensemble (i.e. multiple predictions per batch). Defaults to false
     """
 
     def __init__(self,
@@ -165,6 +167,7 @@ class CrossEntropyLoss(nn.Module):
                  reduction='mean',
                  class_weight=None,
                  do_softmax=False,
+                 ensemble=False,
                  loss_weight=1.0):
         super(CrossEntropyLoss, self).__init__()
         assert (use_sigmoid is False) or (use_mask is False)
@@ -173,6 +176,7 @@ class CrossEntropyLoss(nn.Module):
         self.reduction = reduction
         self.loss_weight = loss_weight
         self.do_softmax = do_softmax
+        self.ensemble = ensemble
         self.class_weight = get_class_weight(class_weight)
 
         if self.use_sigmoid:
@@ -197,13 +201,43 @@ class CrossEntropyLoss(nn.Module):
             class_weight = cls_score.new_tensor(self.class_weight)
         else:
             class_weight = None
-        loss_cls = self.loss_weight * self.cls_criterion(
-            cls_score,
-            label,
-            weight,
-            class_weight=class_weight,
-            reduction=reduction,
-            avg_factor=avg_factor,
-            do_softmax=self.do_softmax,
-            **kwargs)
+
+        if self.ensemble:
+            assert len(cls_score.shape) == 3
+
+            # print("CUDA CHECK")
+            # print(cls_score.is_cuda)
+            # print(label.is_cuda)
+            # exit()
+
+            loss_cls_sum = torch.tensor(0.).to(device=cls_score.device)
+            for cls_score_idx in range(cls_score.shape[1]):
+                cls_score_individual = cls_score[:, cls_score_idx, :]
+                loss_cls_sum += self.loss_weight * self.cls_criterion(
+                    cls_score_individual,
+                    label,
+                    weight,
+                    class_weight=class_weight,
+                    reduction=reduction,
+                    avg_factor=avg_factor,
+                    do_softmax=self.do_softmax,
+                    **kwargs)
+
+            # Average loss
+            loss_cls = loss_cls_sum / cls_score.shape[1]
+            # print("SUMMED LOSS IS")
+            # print(loss_cls_sum)
+            # print("AVERAGED LOSS IS")
+            # print(loss_cls)
+            # exit()
+        else:
+            loss_cls = self.loss_weight * self.cls_criterion(
+                cls_score,
+                label,
+                weight,
+                class_weight=class_weight,
+                reduction=reduction,
+                avg_factor=avg_factor,
+                do_softmax=self.do_softmax,
+                **kwargs)
         return loss_cls

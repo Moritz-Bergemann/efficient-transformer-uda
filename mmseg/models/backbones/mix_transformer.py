@@ -207,7 +207,8 @@ class MixVisionTransformer(BaseModule):
                  style=None,
                  pretrained=None,
                  init_cfg=None,
-                 freeze_patch_embed=False):
+                 freeze_patch_embed=False,
+                 return_patches=False):
         super().__init__(init_cfg)
 
         assert not (init_cfg and pretrained), \
@@ -222,6 +223,8 @@ class MixVisionTransformer(BaseModule):
         self.depths = depths
         self.pretrained = pretrained
         self.init_cfg = init_cfg
+
+        self.return_patches = return_patches
 
         # patch_embed
         self.patch_embed1 = OverlapPatchEmbed(
@@ -397,37 +400,59 @@ class MixVisionTransformer(BaseModule):
     def forward_features(self, x):
         B = x.shape[0]
         outs = []
+        # TODO remove all this garbage, don't you dare commit it
+        # if self.return_patches:
+        #     patches = []
 
         # stage 1
         x, H, W = self.patch_embed1(x)
+        # print("[DEBUG] SHAPE AFTER PATCH EMBED 1 IS", x.shape)
         for i, blk in enumerate(self.block1):
             x = blk(x, H, W)
         x = self.norm1(x)
+        # print("[DEBUG] SHAPE BEFORE RESHAPING 1 IS", x.shape)
+        # if self.return_patches:
+        #    patches.append(x) 
         x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+        # print("[DEBUG] SHAPE AFTER RESHAPING 1 IS", x.shape)
         outs.append(x)
 
         # stage 2
         x, H, W = self.patch_embed2(x)
+        # print("[DEBUG] SHAPE AFTER PATCH EMBED 2 IS", x.shape)
         for i, blk in enumerate(self.block2):
             x = blk(x, H, W)
         x = self.norm2(x)
+        # print("[DEBUG] SHAPE BEFORE RESHAPING 2 IS", x.shape)
         x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+        # print("[DEBUG] SHAPE AFTER RESHAPING 2 IS", x.shape)
         outs.append(x)
 
         # stage 3
         x, H, W = self.patch_embed3(x)
+        # print("[DEBUG] SHAPE AFTER PATCH EMBED 3 IS", x.shape)
         for i, blk in enumerate(self.block3):
             x = blk(x, H, W)
         x = self.norm3(x)
+        # print("[DEBUG] SHAPE BEFORE RESHAPING 3 IS", x.shape)
         x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+        # print("[DEBUG] SHAPE AFTER RESHAPING 3 IS", x.shape)
         outs.append(x)
 
         # stage 4
         x, H, W = self.patch_embed4(x)
+        # print("[DEBUG] SHAPE AFTER PATCH EMBED 4 IS", x.shape)
         for i, blk in enumerate(self.block4):
             x = blk(x, H, W)
         x = self.norm4(x)
+        # print("[DEBUG] SHAPE BEFORE RESHAPING 4 IS", x.shape)
+        # print("[DEBUG] SHAPE TEST PT 1")
+        # print(x.shape)
+        # print(x[0, 11, 222])
+        # print(x[0, 128, 111])
+        # print(x[1, 255, 123])
         x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+        # print("[DEBUG] SHAPE AFTER RESHAPING 4 IS", x.shape)
         outs.append(x)
 
         return outs
