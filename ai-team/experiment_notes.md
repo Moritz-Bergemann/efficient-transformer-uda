@@ -13,11 +13,12 @@ Create a new conda environment (python 3.8)
 
 ```sh
 conda create --name das python=3.8; conda activate das
+conda create --name efficient-das python=3.8; conda activate efficient-das
 ```
 
 Install pytorch
 ```sh
-conda install pytorch torchvision torchaudio cudatoolkit=10.2 -c pytorch-lts -c nvidia
+conda install pytorch==1.7.1 torchvision torchaudio cudatoolkit=11.0 -c pytorch-lts -c nvidia
 ```
 
 Install mmcv locally (mmsegmentation is in this repository, so does not need to be installed)
