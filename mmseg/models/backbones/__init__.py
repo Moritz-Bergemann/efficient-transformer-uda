@@ -6,6 +6,8 @@ from .mix_transformer import (MixVisionTransformer, mit_b0, mit_b1, mit_b2,
 from .resnest import ResNeSt
 from .resnet import ResNet, ResNetV1c, ResNetV1d
 from .resnext import ResNeXt
+from .topformer import Topformer
+from .mobilevit import MobileViT
 
 __all__ = [
     'ResNet',
@@ -20,4 +22,5 @@ __all__ = [
     'mit_b3',
     'mit_b4',
     'mit_b5',
+    'Topformer',
 ]
