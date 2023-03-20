@@ -1,6 +1,6 @@
 _base_ = [
     "../_base_/default_runtime.py",
-    "../_base_/models/topformer.py",
+    "../_base_/models/mobilevit_small.py",
     "../_base_/datasets/cityscapes_half_512x512.py",
     "../_base_/schedules/adamw.py",
     "../_base_/schedules/poly10warm.py"
@@ -14,7 +14,7 @@ data = dict(
     train = dict()
 )
 optimizer = dict(
-    lr = 0.00012,
+    lr = 0.0009,
     paramwise_cfg = dict(
         custom_keys = dict(
             head = dict(
@@ -42,11 +42,11 @@ evaluation = dict(
     interval = 4000,
     metric = "mIoU"
 )
-name = "cityscapes_topformer"
+name = "cityscapes_mobilevit_small"
 exp = 'baseline'
 name_dataset = "cityscapes"
-name_architecture = "topformer_base"
-name_encoder = "topformer_base"
-name_decoder = "simple_decoder"
+name_architecture = "mobilevit_small"
+name_encoder = "mobilevit_small"
+name_decoder = "aspp_head"
 name_uda = "source-only"
 name_opt = "adamw_6e-05_pmTrue_poly10warm_1x2_0k"

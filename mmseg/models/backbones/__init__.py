@@ -7,6 +7,7 @@ from .resnest import ResNeSt
 from .resnet import ResNet, ResNetV1c, ResNetV1d
 from .resnext import ResNeXt
 from .topformer import Topformer
+from .mobilevit import MobileViT
 
 __all__ = [
     'ResNet',
