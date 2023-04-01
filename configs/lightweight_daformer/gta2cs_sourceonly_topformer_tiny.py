@@ -1,6 +1,6 @@
 _base_ = [
     "../_base_/default_runtime.py",
-    "../_base_/models/topformer.py",
+    "../_base_/models/topformer_tiny.py",
     "../_base_/datasets/gta_to_cityscapes_512x512.py",
     "../_base_/schedules/adamw.py",
     "../_base_/schedules/poly10warm.py"
@@ -42,11 +42,11 @@ evaluation = dict(
     interval = 4000,
     metric = "mIoU"
 )
-name = "gta2cs_source-only_topformer_base_poly10warm_s0_66676"
+name = "gta2cs_source-only_topformer_tiny"
 exp = 'baseline'
 name_dataset = "gta2cityscapes"
-name_architecture = "topformer_base"
-name_encoder = "topformer_base"
+name_architecture = "topformer_tiny"
+name_encoder = "topformer_tiny"
 name_decoder = "simple_decoder"
 name_uda = "source-only"
 name_opt = "adamw_6e-05_pmTrue_poly10warm_1x2_0k"

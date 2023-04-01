@@ -13,7 +13,7 @@ Create a new conda environment (python 3.8)
 
 ```sh
 conda create --name das python=3.8; conda activate das
-conda create --name efficient-das python=3.8; conda activate efficient-das
+conda create --name efficient-das python=3.7; conda activate efficient-das
 ```
 
 Install pytorch

@@ -8,7 +8,7 @@ norm_cfg = dict(type='BN', requires_grad=True)
 find_unused_parameters = True
 model = dict(
     type='DomainAdversarialSegmentor',
-    pretrained='pretrained/mit_b4.pth', # M-NOTE: Shortcut for backbone pretrained
+    pretrained='pretrained/segformer/mit_b4.pth', # M-NOTE: Shortcut for backbone pretrained
     backbone=dict(
         type='mit_b4', 
         style='pytorch'),
