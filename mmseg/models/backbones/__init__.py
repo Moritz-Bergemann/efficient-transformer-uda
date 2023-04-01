@@ -8,6 +8,7 @@ from .resnet import ResNet, ResNetV1c, ResNetV1d
 from .resnext import ResNeXt
 from .topformer import Topformer
 from .mobilevit import MobileViT
+from .fast_scnn import FastSCNN
 
 __all__ = [
     'ResNet',
@@ -23,4 +24,6 @@ __all__ = [
     'mit_b4',
     'mit_b5',
     'Topformer',
+    'MobileViT',
+    'FastSCNN',
 ]
