@@ -50,8 +50,8 @@ optimizer = dict(
 n_gpus = 1
 runner = dict(type='IterBasedRunner', max_iters=40000)
 # Logging Configuration
-checkpoint_config = dict(by_epoch=False, interval=40000, max_keep_ckpts=1)
-evaluation = dict(interval=50, metric='mIoU')
+checkpoint_config = dict(by_epoch=False, interval=20000, max_keep_ckpts=1)
+evaluation = dict(interval=4000, metric='mIoU')
 # Meta Information for Result Analysis
 name = 'gta2cs_uda_warm_fdthings_rcs_croppl_a999_topformer_tiny'
 exp = 'uda'

@@ -6,7 +6,7 @@
 _base_ = [
     '../_base_/default_runtime.py',
     # DAFormer Network Architecture
-    "../_base_/models/topformer.py",
+    '../_base_/models/daformer_sepaspp_mitb0.py',
     # GTA->Cityscapes Data Loading
     '../_base_/datasets/uda_gta_to_cityscapes_512x512.py',
     # Basic UDA Self-Training
@@ -18,7 +18,6 @@ _base_ = [
 ]
 # Random Seed
 seed = 0
-
 # Modifications to Basic UDA
 uda = dict(
     # Increased Alpha
@@ -40,7 +39,7 @@ data = dict(
 # Optimizer Hyperparameters
 optimizer_config = None
 optimizer = dict(
-    lr=0.00012,
+    lr=6e-05,
     paramwise_cfg=dict(
         custom_keys=dict(
             head=dict(lr_mult=10.0),
@@ -49,14 +48,14 @@ optimizer = dict(
 n_gpus = 1
 runner = dict(type='IterBasedRunner', max_iters=40000)
 # Logging Configuration
-checkpoint_config = dict(by_epoch=False, interval=20000, max_keep_ckpts=1)
+checkpoint_config = dict(by_epoch=False, interval=40000, max_keep_ckpts=1)
 evaluation = dict(interval=4000, metric='mIoU')
 # Meta Information for Result Analysis
-name = 'gta2cs_uda_warm_fdthings_rcs_croppl_a999_topformer_base'
-exp = 'uda'
+name = 'gta2cs_uda_warm_daformerb0'
+exp = 'basic'
 name_dataset = 'gta2cityscapes'
-name_architecture = 'topformer_base'
-name_encoder = 'topformer_base'
-name_decoder = 'simple_decoder'
+name_architecture = 'daformer_sepaspp_mitb0'
+name_encoder = 'mitb0'
+name_decoder = 'daformer_sepaspp'
 name_uda = 'dacs_a999_fd_things_rcs0.01_cpl'
 name_opt = 'adamw_6e-05_pmTrue_poly10warm_1x2_40k'
