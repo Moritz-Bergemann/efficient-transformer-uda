@@ -1,0 +1,58 @@
+_base_ = [
+    "../_base_/default_runtime.py",
+    "../_base_/models/topformer.py",
+    "../_base_/datasets/cityscapes_pseudolabel_512x512.py",
+    "../_base_/schedules/adamw.py",
+    "../_base_/schedules/poly10warm.py"
+]
+n_gpus = 1
+seed = 0
+
+model = dict(
+    backbone=dict(
+        init_cfg=dict(
+            type='Pretrained', checkpoint='pretrained/pseudo-teacher/topformer-base-sourceonly.pth')))
+
+
+data = dict(
+    samples_per_gpu = 4,
+    workers_per_gpu = 8,
+    train = dict()
+)
+optimizer = dict(
+    lr = 0.00012,
+    paramwise_cfg = dict(
+        custom_keys = dict(
+            head = dict(
+                lr_mult = 10.0
+            ),
+            pos_block = dict(
+                decay_mult = 0.0
+            ),
+            norm = dict(
+                decay_mult = 0.0
+            )
+        )
+    )
+)
+runner = dict(
+    type = "IterBasedRunner",
+    max_iters = 40000
+)
+checkpoint_config = dict(
+    by_epoch = False,
+    interval = 20000,
+    max_keep_ckpts = 1
+)
+evaluation = dict(
+    interval = 4000,
+    metric = "mIoU"
+)
+name = "gta2cs_pseudoteacher_topformer_base_gtapretrained"
+exp = 'pseudo-teacher'
+name_dataset = "gta2cityscapes"
+name_architecture = "topformer_base"
+name_encoder = "topformer_base"
+name_decoder = "simple_decoder"
+name_uda = "pseudo-teacher"
+name_opt = "adamw_6e-05_pmTrue_poly10warm_1x2_0k"
